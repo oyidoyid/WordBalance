@@ -70,10 +70,12 @@ def process_text(text):
 
 def clear_text():
     st.session_state.input_text = ""
+    st.session_state.input_text_widget = "" 
     st.session_state.pending_file_text = None
     st.session_state.scanned_text = ""
     st.session_state.suggestions = []
     st.session_state.char_count = 0
+
 
 
 
@@ -146,3 +148,4 @@ with col2:
             st.success("✅ No biased words detected!")
     else:
         st.info("👈 Paste text on the left or upload a Word file to see highlights here.")
+
