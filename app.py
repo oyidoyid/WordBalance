@@ -6,13 +6,7 @@ import base64
 from biased_words import highlight_text, calculate_bias_percentage
 import docx
 
-user = google_login()
 
-if user:
-    st.success(f"Welcome {user['name']}!")
-    # Load WordBalance dashboard here
-else:
-    st.info("Please login with Google to continue.")
 
 header_image = Image.open("ggg.png")
 buffered = BytesIO()
@@ -158,4 +152,5 @@ with col2:
             st.success("✅ No biased words detected!")
     else:
         st.info("👈 Paste text on the left or upload a Word file to see highlights here.")
+
 
