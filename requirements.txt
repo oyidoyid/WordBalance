@@ -1,3 +1,6 @@
 streamlit
-pillow
+firebase-admin
+pyrebase4
+Pillow
+requests
 python-docx
