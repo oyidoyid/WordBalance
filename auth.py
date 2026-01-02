@@ -17,7 +17,7 @@ if not firebase_admin._apps:
 # -------------------- Google OAuth Config --------------------
 GOOGLE_CLIENT_ID = "48992185146-upbvm8mdsl2d18f35affa74is5llrdqe.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = "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"
-REDIRECT_URI = "https://wordbalance.streamlit.app"  # change to deployed URL when live
+REDIRECT_URI = "https://wordbalance.streamlit.app"  # must match exactly Google Cloud OAuth URI
 
 # -------------------- Google Login Function --------------------
 def google_login():
@@ -34,6 +34,8 @@ def google_login():
         "&response_type=code"
         "&scope=email%20profile"
         "&access_type=offline"
+        "&prompt=consent"  # Force consent screen for unverified apps
+        "&include_granted_scopes=true"
     )
 
     st.markdown(f"[🔐 Continue with Google]({login_url})")
@@ -44,52 +46,52 @@ def google_login():
         code = code[0]  # streamlit query_params returns list
 
         # Step 3: Exchange code for access token
-        try:
-            token_req = requests.post(
-                "https://oauth2.googleapis.com/token",
-                data={
-                    "code": code,
-                    "client_id": GOOGLE_CLIENT_ID,
-                    "client_secret": GOOGLE_CLIENT_SECRET,
-                    "redirect_uri": REDIRECT_URI,
-                    "grant_type": "authorization_code"
-                }
-            ).json()
-
-            access_token = token_req.get("access_token")
-            if not access_token:
-                st.error("Failed to get access token. Check Google OAuth setup.")
-                return None
-
-            # Step 4: Get user info from Google
-            userinfo = requests.get(
-                "https://www.googleapis.com/oauth2/v1/userinfo",
-                params={"access_token": access_token}
-            ).json()
-
-            email = userinfo["email"]
-            display_name = userinfo.get("name", email.split("@")[0])
-
-            # Step 5: Create Firebase user if not exists
-            try:
-                firebase_user = auth.get_user_by_email(email)
-            except auth.UserNotFoundError:
-                firebase_user = auth.create_user(email=email, display_name=display_name)
-
-            # Step 6: Save user in session
-            st.session_state.user = {
-                "email": firebase_user.email,
-                "uid": firebase_user.uid,
-                "name": firebase_user.display_name
+        token_req = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": REDIRECT_URI,
+                "grant_type": "authorization_code"
             }
+        ).json()
 
-            # Step 7: Clear code param and rerun
-            st.query_params.clear()
-            ctx = get_script_run_ctx()
-            if ctx is not None:
-                raise RerunException(ctx)
+        if "error" in token_req:
+            st.error(f"OAuth error: {token_req['error_description'] if 'error_description' in token_req else token_req['error']}")
+            return None
 
-        except Exception as e:
-            st.error(f"Login failed: {e}")
+        access_token = token_req.get("access_token")
+        if not access_token:
+            st.error(f"Failed to get access token. Response: {token_req}")
+            return None
+
+        # Step 4: Get user info from Google
+        userinfo = requests.get(
+            "https://www.googleapis.com/oauth2/v1/userinfo",
+            params={"access_token": access_token}
+        ).json()
+
+        email = userinfo["email"]
+        display_name = userinfo.get("name", email.split("@")[0])
+
+        # Step 5: Create Firebase user if not exists
+        try:
+            firebase_user = auth.get_user_by_email(email)
+        except auth.UserNotFoundError:
+            firebase_user = auth.create_user(email=email, display_name=display_name)
+
+        # Step 6: Save user in session
+        st.session_state.user = {
+            "email": firebase_user.email,
+            "uid": firebase_user.uid,
+            "name": firebase_user.display_name
+        }
+
+        # Step 7: Clear code param and rerun
+        st.query_params.clear()
+        ctx = get_script_run_ctx()
+        if ctx is not None:
+            raise RerunException(ctx)
 
     return None
