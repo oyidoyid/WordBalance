@@ -17,10 +17,18 @@ if not firebase_admin._apps:
 # -------------------- Google OAuth Config --------------------
 GOOGLE_CLIENT_ID = "48992185146-upbvm8mdsl2d18f35affa74is5llrdqe.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = "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"
-REDIRECT_URI = "https://wordbalance.streamlit.app"  # must match exactly Google Cloud OAuth URI
+REDIRECT_URI = "https://wordbalance.streamlit.app"  # must match Google Cloud exactly
+
+# -------------------- Helper: Clear query params & rerun --------------------
+def rerun_app():
+    st.query_params.clear()
+    ctx = get_script_run_ctx()
+    if ctx is not None:
+        raise RerunException(ctx)
 
 # -------------------- Google Login Function --------------------
 def google_login():
+    # If user already logged in
     if "user" in st.session_state:
         return st.session_state.user
 
@@ -34,16 +42,14 @@ def google_login():
         "&response_type=code"
         "&scope=email%20profile"
         "&access_type=offline"
-        "&prompt=consent"  # Force consent screen for unverified apps
-        "&include_granted_scopes=true"
+        "&prompt=consent"  # force fresh code, avoid malformed code
     )
-
     st.markdown(f"[🔐 Continue with Google]({login_url})")
 
-    # Step 2: Get code from URL params
-    code = st.query_params.get("code")
-    if code:
-        code = code[0]  # streamlit query_params returns list
+    # Step 2: Get code from URL query params
+    code_list = st.query_params.get("code")
+    if code_list and not st.session_state.get("auth_code_used", False):
+        code = code_list[0]  # Streamlit query_params returns list
 
         # Step 3: Exchange code for access token
         token_req = requests.post(
@@ -57,8 +63,9 @@ def google_login():
             }
         ).json()
 
+        # Handle errors
         if "error" in token_req:
-            st.error(f"OAuth error: {token_req['error_description'] if 'error_description' in token_req else token_req['error']}")
+            st.error(f"OAuth error: {token_req.get('error_description', token_req['error'])}")
             return None
 
         access_token = token_req.get("access_token")
@@ -72,7 +79,7 @@ def google_login():
             params={"access_token": access_token}
         ).json()
 
-        email = userinfo["email"]
+        email = userinfo.get("email")
         display_name = userinfo.get("name", email.split("@")[0])
 
         # Step 5: Create Firebase user if not exists
@@ -88,10 +95,10 @@ def google_login():
             "name": firebase_user.display_name
         }
 
-        # Step 7: Clear code param and rerun
-        st.query_params.clear()
-        ctx = get_script_run_ctx()
-        if ctx is not None:
-            raise RerunException(ctx)
+        # Mark code as used to avoid reuse
+        st.session_state.auth_code_used = True
+
+        # Step 7: Clear URL params and rerun app
+        rerun_app()
 
     return None
