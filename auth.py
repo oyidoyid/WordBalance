@@ -17,7 +17,7 @@ if not firebase_admin._apps:
 # -------------------- Google OAuth Config --------------------
 GOOGLE_CLIENT_ID = "48992185146-upbvm8mdsl2d18f35affa74is5llrdqe.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = "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"
-REDIRECT_URI = "https://wordbalance.streamlit.app/"  # change to deployed URL when live
+REDIRECT_URI = "https://wordbalance.streamlit.app"  # change to deployed URL when live
 
 # -------------------- Google Login Function --------------------
 def google_login():
