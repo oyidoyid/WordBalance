@@ -7,9 +7,10 @@ from biased_words import highlight_text, calculate_bias_percentage
 import docx
 
 user = google_login()
+
 if user:
     st.success(f"Welcome {user['name']}!")
-    # Load the WordBalance dashboard here
+    # Load WordBalance dashboard here
 else:
     st.info("Please login with Google to continue.")
 
@@ -157,3 +158,4 @@ with col2:
             st.success("✅ No biased words detected!")
     else:
         st.info("👈 Paste text on the left or upload a Word file to see highlights here.")
+
