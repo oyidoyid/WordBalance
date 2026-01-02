@@ -1,3 +1,4 @@
+from auth import google_login
 import streamlit as st
 from PIL import Image
 from io import BytesIO
@@ -5,6 +6,12 @@ import base64
 from biased_words import highlight_text, calculate_bias_percentage
 import docx
 
+user = google_login()
+if user:
+    st.success(f"Welcome {user['name']}!")
+    # Load the WordBalance dashboard here
+else:
+    st.info("Please login with Google to continue.")
 
 header_image = Image.open("ggg.png")
 buffered = BytesIO()
